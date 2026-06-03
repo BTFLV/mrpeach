@@ -17,11 +17,14 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install Pure Data
-        run: sudo apt-get update && sudo apt-get install -y puredata-dev
+      - name: Download Pure Data
+        run: |
+          curl -L https://github.com/pure-data/pure-data/archive/refs/tags/0.55-2.tar.gz -o pd.tar.gz
+          tar -xzf pd.tar.gz
+          mv pure-data-0.55-2 pd
 
       - name: Build
-        run: make PDINCLUDEDIR=/usr/include/pd
+        run: make PDINCLUDEDIR=pd/src
 
       - name: Collect artifacts
         run: |
@@ -89,12 +92,13 @@ jobs:
 
       - name: Download Pure Data
         run: |
-          curl -L -o pd.zip http://msp.ucsd.edu/Software/pd-0.55-2.mac.zip
-          unzip -q pd.zip
+          curl -L https://github.com/pure-data/pure-data/archive/refs/tags/0.55-2.tar.gz -o pd.tar.gz
+          tar -xzf pd.tar.gz
+          mv pure-data-0.55-2 pd
 
       - name: Build universal binary
         run: |
-          make PDINCLUDEDIR="Pd-0.55-2.app/Contents/Resources/src" \
+          make PDINCLUDEDIR=pd/src \
                arch="x86_64 arm64"
 
       - name: Collect artifacts
