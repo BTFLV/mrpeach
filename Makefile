@@ -52,11 +52,11 @@ net_sources = \
 	net/udpsend~.c \
 	$(empty)
 osc_sources = $(wildcard \
-	osc/unpackOSC.c \
 	osc/routeOSC.c \
-	osc/packOSC.c \
 	osc/pipelist.c \
 	)
+packOSC.class.sources = $(wildcard osc/packOSC.c osc/OSC_timeTag.c)
+unpackOSC.class.sources = $(wildcard osc/unpackOSC.c osc/OSC_timeTag.c)
 slip_sources = $(wildcard \
 	slip/slipdec.c \
 	slip/slipenc.c \
