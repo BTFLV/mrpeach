@@ -1,0 +1,139 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Pure Data
+        run: sudo apt-get update && sudo apt-get install -y puredata-dev
+
+      - name: Build
+        run: make PDINCLUDEDIR=/usr/include/pd
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p dist/mrpeach
+          cp -r */*.pd dist/mrpeach/ 2>/dev/null || true
+          cp README.deken.pd dist/mrpeach/ 2>/dev/null || true
+          cp mrpeach-meta.pd dist/mrpeach/ 2>/dev/null || true
+          find . -name "*.pd_linux" -exec cp {} dist/mrpeach/ \;
+
+      - name: Create archive
+        run: cd dist && zip -r ../mrpeach-linux-amd64.zip mrpeach
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mrpeach-linux-amd64
+          path: mrpeach-linux-amd64.zip
+
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-gcc
+            make
+            unzip
+            wget
+            zip
+
+      - name: Download Pure Data
+        run: |
+          wget -q http://msp.ucsd.edu/Software/pd-0.55-2.msw.zip -O pd.zip
+          unzip -q pd.zip
+          mv pd-0.55-2 pd
+
+      - name: Build
+        run: make PDINCLUDEDIR=pd/src PDBINDIR=pd/bin
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p dist/mrpeach
+          cp -r */*.pd dist/mrpeach/ 2>/dev/null || true
+          cp README.deken.pd dist/mrpeach/ 2>/dev/null || true
+          cp mrpeach-meta.pd dist/mrpeach/ 2>/dev/null || true
+          find . -name "*.dll" -exec cp {} dist/mrpeach/ \;
+
+      - name: Create archive
+        run: cd dist && zip -r ../mrpeach-windows-amd64.zip mrpeach
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mrpeach-windows-amd64
+          path: mrpeach-windows-amd64.zip
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Download Pure Data
+        run: |
+          curl -L -o pd.zip http://msp.ucsd.edu/Software/pd-0.55-2.mac.zip
+          unzip -q pd.zip
+
+      - name: Build universal binary
+        run: |
+          make PDINCLUDEDIR="Pd-0.55-2.app/Contents/Resources/src" \
+               arch="x86_64 arm64"
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p dist/mrpeach
+          cp -r */*.pd dist/mrpeach/ 2>/dev/null || true
+          cp README.deken.pd dist/mrpeach/ 2>/dev/null || true
+          cp mrpeach-meta.pd dist/mrpeach/ 2>/dev/null || true
+          find . -name "*.pd_darwin" -exec cp {} dist/mrpeach/ \;
+
+      - name: Create archive
+        run: cd dist && zip -r ../mrpeach-macos-universal.zip mrpeach
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mrpeach-macos-universal
+          path: mrpeach-macos-universal.zip
+
+  release:
+    needs: [linux, windows, macos]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            artifacts/mrpeach-linux-amd64/mrpeach-linux-amd64.zip
+            artifacts/mrpeach-windows-amd64/mrpeach-windows-amd64.zip
+            artifacts/mrpeach-macos-universal/mrpeach-macos-universal.zip
