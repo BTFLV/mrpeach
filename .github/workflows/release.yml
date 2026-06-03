@@ -1,20 +1,24 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_run:
+    workflows: ["Build"]
+    types:
+      - completed
+    branches: [main, master]
 
 permissions:
   contents: write
 
 jobs:
   linux:
+    if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Download Pure Data
         run: |
@@ -43,6 +47,7 @@ jobs:
           path: mrpeach-linux-amd64.zip
 
   windows:
+    if: github.event.workflow_run.conclusion == 'success'
     runs-on: windows-latest
     defaults:
       run:
@@ -51,6 +56,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - uses: msys2/setup-msys2@v2
         with:
@@ -90,11 +96,13 @@ jobs:
           path: mrpeach-windows-amd64.zip
 
   macos:
+    if: github.event.workflow_run.conclusion == 'success'
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Download Pure Data
         run: |
@@ -136,6 +144,7 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: build-${{ github.event.workflow_run.head_sha }}
           generate_release_notes: true
           files: |
             artifacts/mrpeach-linux-amd64/mrpeach-linux-amd64.zip
